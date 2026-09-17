@@ -13,10 +13,27 @@ import com.example.superpodcast.data.RetrofitClient
 import com.example.superpodcast.ui.PodcastAdapter
 import kotlinx.coroutines.launch
 
+/**
+ * Assignment 8 - SuperPodcast
+ *
+ * MainActivity is the main podcast search screen.
+ *
+ * The user can:
+ * 1. Search for podcasts using the iTunes API.
+ * 2. View podcast search results.
+ * 3. Open a podcast detail screen.
+ * 4. Open the My Subscriptions screen to view
+ *    podcasts stored locally in the Room database.
+ */
 class MainActivity : AppCompatActivity() {
 
     private lateinit var editTextSearch: EditText
     private lateinit var buttonSearch: Button
+
+    // Assignment 8:
+    // Opens podcasts stored in the Room database.
+    private lateinit var buttonMySubscriptions: Button
+
     private lateinit var recyclerView: RecyclerView
     private lateinit var podcastAdapter: PodcastAdapter
 
@@ -30,7 +47,10 @@ class MainActivity : AppCompatActivity() {
             R.layout.activity_main
         )
 
-        // Connect Kotlin variables to the views in activity_main.xml.
+        // ---------------------------------------------------------
+        // CONNECT XML VIEWS
+        // ---------------------------------------------------------
+
         editTextSearch =
             findViewById(
                 R.id.editTextSearch
@@ -41,13 +61,24 @@ class MainActivity : AppCompatActivity() {
                 R.id.buttonSearch
             )
 
+        buttonMySubscriptions =
+            findViewById(
+                R.id.buttonMySubscriptions
+            )
+
         recyclerView =
             findViewById(
                 R.id.recyclerView
             )
 
+        // ---------------------------------------------------------
+        // PODCAST SEARCH RESULTS
+        // ---------------------------------------------------------
+
         // Create the RecyclerView adapter.
-        // When the user taps a result, open the detail activity.
+        //
+        // When the user taps a podcast result,
+        // PodcastDetailActivity opens.
         podcastAdapter =
             PodcastAdapter { podcast ->
 
@@ -57,28 +88,31 @@ class MainActivity : AppCompatActivity() {
                         PodcastDetailActivity::class.java
                     )
 
-                // Pass the selected podcast data
-                // to the detail screen.
+                // Pass the selected podcast ID.
                 intent.putExtra(
                     "podcastId",
                     podcast.collectionId
                 )
 
+                // Pass the podcast title.
                 intent.putExtra(
                     "title",
                     podcast.collectionName
                 )
 
+                // Pass the podcast artist/publisher.
                 intent.putExtra(
                     "artist",
                     podcast.artistName
                 )
 
+                // Pass the podcast artwork URL.
                 intent.putExtra(
                     "artwork",
                     podcast.artworkUrl100
                 )
 
+                // Pass the RSS feed URL.
                 intent.putExtra(
                     "feedUrl",
                     podcast.feedUrl
@@ -87,14 +121,17 @@ class MainActivity : AppCompatActivity() {
                 startActivity(intent)
             }
 
-        // RecyclerView displays results vertically.
+        // Display podcast search results vertically.
         recyclerView.layoutManager =
             LinearLayoutManager(this)
 
         recyclerView.adapter =
             podcastAdapter
 
-        // Perform a podcast search when Search is pressed.
+        // ---------------------------------------------------------
+        // SEARCH BUTTON
+        // ---------------------------------------------------------
+
         buttonSearch.setOnClickListener {
 
             val searchTerm =
@@ -103,6 +140,7 @@ class MainActivity : AppCompatActivity() {
                     .toString()
                     .trim()
 
+            // Prevent an empty search.
             if (searchTerm.isEmpty()) {
 
                 Toast.makeText(
@@ -113,18 +151,41 @@ class MainActivity : AppCompatActivity() {
 
             } else {
 
-                searchPodcasts(searchTerm)
+                searchPodcasts(
+                    searchTerm
+                )
             }
+        }
+
+        // ---------------------------------------------------------
+        // MY SUBSCRIPTIONS BUTTON
+        // ---------------------------------------------------------
+
+        // Assignment 8:
+        // Open the screen containing podcasts that
+        // have been saved in the Room database.
+        buttonMySubscriptions.setOnClickListener {
+
+            val intent =
+                Intent(
+                    this,
+                    SubscriptionsActivity::class.java
+                )
+
+            startActivity(intent)
         }
     }
 
-    // Sends the user's search term to the iTunes API.
+    /**
+     * Sends the user's search term to the iTunes API
+     * and displays the returned podcasts.
+     */
     private fun searchPodcasts(
         searchTerm: String
     ) {
 
-        // lifecycleScope automatically stops
-        // its work if this Activity is destroyed.
+        // lifecycleScope automatically stops its work
+        // if MainActivity is destroyed.
         lifecycleScope.launch {
 
             try {
@@ -141,6 +202,8 @@ class MainActivity : AppCompatActivity() {
                     response.results
                 )
 
+                // Inform the user when the API
+                // returns no podcast results.
                 if (
                     response.results.isEmpty()
                 ) {
@@ -156,7 +219,8 @@ class MainActivity : AppCompatActivity() {
                 exception: Exception
             ) {
 
-                // Prevent a network problem from crashing the app.
+                // Prevent network errors from
+                // crashing the application.
                 Toast.makeText(
                     this@MainActivity,
                     "Unable to load podcasts.",

@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+    Assignment 8 - Room Database
+
+    This layout represents one podcast displayed
+    inside the My Subscriptions RecyclerView.
+
+    It displays:
+    1. Podcast artwork
+    2. Podcast title
+    3. Podcast artist/publisher
+-->
+
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:padding="12dp"
+    android:layout_marginStart="12dp"
+    android:layout_marginEnd="12dp"
+    android:layout_marginTop="6dp"
+    android:layout_marginBottom="6dp"
+    android:background="#FFFFFF">
+
+    <!--
+        Displays the artwork for the subscribed podcast.
+        Glide loads the image from the artwork URL.
+    -->
+    <ImageView
+        android:id="@+id/imageSubscriptionArtwork"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:contentDescription="Podcast artwork"
+        android:scaleType="centerCrop" />
+
+    <!--
+        Holds the podcast title and artist.
+    -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="16dp"
+        android:orientation="vertical">
+
+        <!-- Podcast title -->
+        <TextView
+            android:id="@+id/textSubscriptionTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Podcast Title"
+            android:textColor="#333333"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:maxLines="2" />
+
+        <!-- Podcast artist or publisher -->
+        <TextView
+            android:id="@+id/textSubscriptionArtist"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="Podcast Artist"
+            android:textColor="#666666"
+            android:textSize="14sp"
+            android:maxLines="2" />
+
+    </LinearLayout>
+
+</LinearLayout>

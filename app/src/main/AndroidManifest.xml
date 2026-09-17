@@ -20,6 +20,10 @@
             android:name=".PodcastDetailActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".SubscriptionsActivity"
+            android:exported="false" />
+
         <!-- Main search screen and application launcher activity. -->
         <activity
             android:name=".MainActivity"

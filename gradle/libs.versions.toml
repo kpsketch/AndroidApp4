@@ -1,5 +1,9 @@
 [versions]
+
+# Android Gradle Plugin
 agp = "9.3.2"
+
+# Standard Android libraries
 coreKtx = "1.19.0"
 junit = "4.13.2"
 junitVersion = "1.3.0"
@@ -9,13 +13,18 @@ material = "1.14.0"
 activityKtx = "1.13.0"
 constraintlayout = "2.2.2"
 
-# Assignment 7 libraries
+# KSP - used for code generation
 ksp = "2.3.11"
+
+# Assignment 7 libraries
 retrofit = "3.0.0"
 glide = "4.14.2"
 gson = "2.14.0"
 lifecycle = "2.11.0"
 recyclerview = "1.4.0"
+
+# Assignment 8 - Room database
+room = "2.8.4"
 
 
 [libraries]
@@ -30,7 +39,7 @@ material = { group = "com.google.android.material", name = "material", version.r
 androidx-activity-ktx = { group = "androidx.activity", name = "activity-ktx", version.ref = "activityKtx" }
 androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
 
-# Retrofit - networking
+# Retrofit - networking / iTunes API
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
 retrofit-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "retrofit" }
 
@@ -41,16 +50,27 @@ glide-ksp = { module = "com.github.bumptech.glide:ksp", version.ref = "glide" }
 # Gson - JSON parsing
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 
-# RecyclerView
+# RecyclerView - podcast lists
 recyclerview = { module = "androidx.recyclerview:recyclerview", version.ref = "recyclerview" }
 
 # Lifecycle / ViewModel support
 lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
 
+# Assignment 8 - Room
+# Runtime provides the Room database APIs.
+room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
+
+# Kotlin extensions for Room.
+room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
+
+# KSP compiler generates Room database code.
+room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+
 
 [plugins]
 
+# Android application plugin
 android-application = { id = "com.android.application", version.ref = "agp" }
 
-# KSP is used with the current Gradle setup.
+# KSP is used for generated code.
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

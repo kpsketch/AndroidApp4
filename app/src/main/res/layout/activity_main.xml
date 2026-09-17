@@ -1,5 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+
+<!--
+    Assignment 8 - SuperPodcast
+
+    Main screen layout.
+
+    This screen allows the user to:
+    1. Search for podcasts.
+    2. View podcast search results.
+    3. Open podcasts saved in the Room database.
+-->
+
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -7,16 +20,18 @@
     android:padding="16dp"
     tools:context=".MainActivity">
 
+    <!-- Application title -->
     <TextView
         android:id="@+id/textTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:gravity="center"
+        android:paddingBottom="16dp"
         android:text="SuperPodcast"
         android:textSize="28sp"
-        android:textStyle="bold"
-        android:gravity="center"
-        android:paddingBottom="16dp" />
+        android:textStyle="bold" />
 
+    <!-- User enters the podcast search term here -->
     <EditText
         android:id="@+id/editTextSearch"
         android:layout_width="match_parent"
@@ -25,6 +40,7 @@
         android:inputType="text"
         android:singleLine="true" />
 
+    <!-- Searches the iTunes podcast API -->
     <Button
         android:id="@+id/buttonSearch"
         android:layout_width="match_parent"
@@ -32,12 +48,26 @@
         android:layout_marginTop="10dp"
         android:text="Search" />
 
+    <!--
+        Opens the subscriptions screen.
+
+        Subscribed podcasts are stored locally
+        using the Room database.
+    -->
+    <Button
+        android:id="@+id/buttonMySubscriptions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="My Subscriptions" />
+
+    <!-- Displays podcast search results -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
         android:layout_marginTop="12dp"
+        android:layout_weight="1"
         tools:listitem="@layout/item_podcast" />
 
 </LinearLayout>

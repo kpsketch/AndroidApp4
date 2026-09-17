@@ -1,6 +1,5 @@
 package com.example.superpodcast
 
-import android.content.Context
 import android.media.MediaPlayer
 import android.os.Bundle
 import android.widget.Button
@@ -10,13 +9,32 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
+import com.example.superpodcast.data.PodcastDatabase
+import com.example.superpodcast.data.PodcastEntity
 import com.example.superpodcast.data.RssFeedParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class PodcastDetailActivity :
-    AppCompatActivity() {
+/**
+ * Assignment 8 - Room Database
+ *
+ * PodcastDetailActivity displays information about the podcast
+ * selected by the user.
+ *
+ * This Activity also allows the user to:
+ *
+ * 1. Subscribe to a podcast.
+ * 2. Unsubscribe from a podcast.
+ * 3. Store subscriptions using the Room database.
+ * 4. Play the latest podcast episode.
+ * 5. Pause podcast playback.
+ */
+class PodcastDetailActivity : AppCompatActivity() {
+
+    // ---------------------------------------------------------
+    // UI CONTROLS
+    // ---------------------------------------------------------
 
     private lateinit var imageArtwork: ImageView
     private lateinit var textTitle: TextView
@@ -25,11 +43,33 @@ class PodcastDetailActivity :
     private lateinit var buttonPlay: Button
     private lateinit var buttonBack: Button
 
+
+    // ---------------------------------------------------------
+    // PODCAST INFORMATION
+    // ---------------------------------------------------------
+
     private var podcastId: Long = 0L
     private var podcastTitle: String = ""
     private var artistName: String = ""
     private var artworkUrl: String? = null
     private var feedUrl: String? = null
+
+
+    // ---------------------------------------------------------
+    // ROOM DATABASE
+    // ---------------------------------------------------------
+
+    // The database gives us access to PodcastDao.
+    private lateinit var database: PodcastDatabase
+
+    // Keeps track of the subscription state currently shown
+    // on the screen.
+    private var subscribed = false
+
+
+    // ---------------------------------------------------------
+    // MEDIA PLAYER
+    // ---------------------------------------------------------
 
     // MediaPlayer streams the latest podcast episode.
     private var mediaPlayer: MediaPlayer? = null
@@ -37,13 +77,12 @@ class PodcastDetailActivity :
     // Tracks whether audio is currently playing.
     private var isPlaying = false
 
-    // SharedPreferences file used to remember subscriptions.
-    private val preferencesName =
-        "SuperPodcastSubscriptions"
 
-    override fun onCreate(
-        savedInstanceState: Bundle?
-    ) {
+    // ---------------------------------------------------------
+    // ON CREATE
+    // ---------------------------------------------------------
+
+    override fun onCreate(savedInstanceState: Bundle?) {
 
         super.onCreate(savedInstanceState)
 
@@ -51,7 +90,11 @@ class PodcastDetailActivity :
             R.layout.activity_podcast_detail
         )
 
-        // Connect Kotlin variables to XML controls.
+
+        // -----------------------------------------------------
+        // CONNECT KOTLIN VARIABLES TO XML CONTROLS
+        // -----------------------------------------------------
+
         imageArtwork =
             findViewById(
                 R.id.imageDetailArtwork
@@ -82,8 +125,21 @@ class PodcastDetailActivity :
                 R.id.buttonBack
             )
 
-        // Read the podcast information
-        // supplied by MainActivity.
+
+        // -----------------------------------------------------
+        // CREATE / OPEN ROOM DATABASE
+        // -----------------------------------------------------
+
+        database =
+            PodcastDatabase.getDatabase(
+                applicationContext
+            )
+
+
+        // -----------------------------------------------------
+        // RECEIVE PODCAST INFORMATION FROM MAINACTIVITY
+        // -----------------------------------------------------
+
         podcastId =
             intent.getLongExtra(
                 "podcastId",
@@ -110,24 +166,38 @@ class PodcastDetailActivity :
                 "feedUrl"
             )
 
-        // Display the selected podcast.
+
+        // -----------------------------------------------------
+        // DISPLAY PODCAST INFORMATION
+        // -----------------------------------------------------
+
         textTitle.text =
             podcastTitle
 
         textArtist.text =
             artistName
 
+
+        // Glide downloads and displays the podcast artwork.
         Glide.with(this)
             .load(artworkUrl)
             .into(imageArtwork)
 
-        // Restore the saved subscription state.
-        updateSubscribeButton()
 
-        // Subscribe or unsubscribe from the selected podcast.
+        // -----------------------------------------------------
+        // CHECK ROOM DATABASE FOR SUBSCRIPTION
+        // -----------------------------------------------------
+
+        checkSubscriptionStatus()
+
+
+        // -----------------------------------------------------
+        // SUBSCRIBE BUTTON
+        // -----------------------------------------------------
+
         buttonSubscribe.setOnClickListener {
 
-            if (isSubscribed()) {
+            if (subscribed) {
 
                 unsubscribePodcast()
 
@@ -135,11 +205,13 @@ class PodcastDetailActivity :
 
                 subscribePodcast()
             }
-
-            updateSubscribeButton()
         }
 
-        // Play or pause the latest episode.
+
+        // -----------------------------------------------------
+        // PLAY / PAUSE BUTTON
+        // -----------------------------------------------------
+
         buttonPlay.setOnClickListener {
 
             if (isPlaying) {
@@ -152,19 +224,191 @@ class PodcastDetailActivity :
             }
         }
 
-        // Return to the podcast search screen.
+
+        // -----------------------------------------------------
+        // BACK BUTTON
+        // -----------------------------------------------------
+
         buttonBack.setOnClickListener {
 
             finish()
         }
     }
 
-    // Loads the RSS feed on a background thread
-    // so network work does not block the user interface.
+
+    // ---------------------------------------------------------
+    // ROOM DATABASE - CHECK SUBSCRIPTION
+    // ---------------------------------------------------------
+
+    /**
+     * Checks the Room database to determine whether
+     * this podcast is already subscribed.
+     *
+     * Database operations are performed using Dispatchers.IO
+     * so they do not block the user interface.
+     */
+    private fun checkSubscriptionStatus() {
+
+        lifecycleScope.launch {
+
+            val savedPodcast =
+                withContext(
+                    Dispatchers.IO
+                ) {
+
+                    database
+                        .podcastDao()
+                        .getPodcastById(
+                            podcastId
+                        )
+                }
+
+            subscribed =
+                savedPodcast != null
+
+            updateSubscribeButton()
+        }
+    }
+
+
+    // ---------------------------------------------------------
+    // ROOM DATABASE - SUBSCRIBE
+    // ---------------------------------------------------------
+
+    /**
+     * Saves the selected podcast into the Room database.
+     */
+    private fun subscribePodcast() {
+
+        // Create a PodcastEntity containing the podcast
+        // information that will be stored in Room.
+        val podcast =
+            PodcastEntity(
+                podcastId = podcastId,
+                title = podcastTitle,
+                artist = artistName,
+                artworkUrl = artworkUrl ?: "",
+                feedUrl = feedUrl ?: ""
+            )
+
+
+        lifecycleScope.launch {
+
+            // Insert database records on the IO thread.
+            withContext(
+                Dispatchers.IO
+            ) {
+
+                database
+                    .podcastDao()
+                    .insertPodcast(
+                        podcast
+                    )
+            }
+
+
+            // Update local subscription state.
+            subscribed = true
+
+            updateSubscribeButton()
+
+
+            Toast.makeText(
+                this@PodcastDetailActivity,
+                "Subscribed to $podcastTitle",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+
+    // ---------------------------------------------------------
+    // ROOM DATABASE - UNSUBSCRIBE
+    // ---------------------------------------------------------
+
+    /**
+     * Removes the current podcast from the Room database.
+     */
+    private fun unsubscribePodcast() {
+
+        val podcast =
+            PodcastEntity(
+                podcastId = podcastId,
+                title = podcastTitle,
+                artist = artistName,
+                artworkUrl = artworkUrl ?: "",
+                feedUrl = feedUrl ?: ""
+            )
+
+
+        lifecycleScope.launch {
+
+            // Delete the podcast from Room.
+            withContext(
+                Dispatchers.IO
+            ) {
+
+                database
+                    .podcastDao()
+                    .deletePodcast(
+                        podcast
+                    )
+            }
+
+
+            // Update local subscription state.
+            subscribed = false
+
+            updateSubscribeButton()
+
+
+            Toast.makeText(
+                this@PodcastDetailActivity,
+                "Unsubscribed from $podcastTitle",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+
+    // ---------------------------------------------------------
+    // UPDATE SUBSCRIBE BUTTON
+    // ---------------------------------------------------------
+
+    /**
+     * Changes the Subscribe button text depending
+     * on whether the podcast exists in Room.
+     */
+    private fun updateSubscribeButton() {
+
+        if (subscribed) {
+
+            buttonSubscribe.text =
+                "Subscribed ✓"
+
+        } else {
+
+            buttonSubscribe.text =
+                "Subscribe"
+        }
+    }
+
+
+    // ---------------------------------------------------------
+    // LOAD LATEST PODCAST EPISODE
+    // ---------------------------------------------------------
+
+    /**
+     * Downloads the podcast RSS feed and retrieves
+     * the newest playable episode.
+     */
     private fun loadAndPlayLatestEpisode() {
 
-        val url = feedUrl
+        val url =
+            feedUrl
 
+
+        // Make sure the podcast has an RSS feed.
         if (url.isNullOrEmpty()) {
 
             Toast.makeText(
@@ -176,10 +420,14 @@ class PodcastDetailActivity :
             return
         }
 
-        buttonPlay.isEnabled = false
+
+        // Disable the button while the RSS feed loads.
+        buttonPlay.isEnabled =
+            false
 
         buttonPlay.text =
             "Loading..."
+
 
         lifecycleScope.launch {
 
@@ -196,12 +444,16 @@ class PodcastDetailActivity :
                         )
                 }
 
+
+            // No playable episode was found.
             if (episode == null) {
 
-                buttonPlay.isEnabled = true
+                buttonPlay.isEnabled =
+                    true
 
                 buttonPlay.text =
                     "Play Podcast"
+
 
                 Toast.makeText(
                     this@PodcastDetailActivity,
@@ -212,76 +464,102 @@ class PodcastDetailActivity :
                 return@launch
             }
 
+
             Toast.makeText(
                 this@PodcastDetailActivity,
                 "Playing: ${episode.title}",
                 Toast.LENGTH_SHORT
             ).show()
 
+
+            // Start streaming the episode.
             playAudio(
                 episode.audioUrl
             )
         }
     }
 
-    // Streams the selected podcast episode using MediaPlayer.
+
+    // ---------------------------------------------------------
+    // PLAY AUDIO
+    // ---------------------------------------------------------
+
+    /**
+     * Streams the selected podcast episode
+     * using Android MediaPlayer.
+     */
     private fun playAudio(
         audioUrl: String
     ) {
 
         try {
 
-            // Release any previous MediaPlayer
-            // before creating a new one.
+            // Release any previous MediaPlayer before
+            // creating a new MediaPlayer instance.
             mediaPlayer?.release()
+
 
             mediaPlayer =
                 MediaPlayer().apply {
 
+                    // URL of the podcast MP3/audio file.
                     setDataSource(
                         audioUrl
                     )
 
-                    // prepareAsync prevents audio preparation
-                    // from freezing the UI.
+
+                    // MediaPlayer prepares the remote audio
+                    // asynchronously so the UI does not freeze.
                     setOnPreparedListener {
 
                         it.start()
 
+
                         this@PodcastDetailActivity
                             .isPlaying = true
 
+
                         buttonPlay.isEnabled =
                             true
+
 
                         buttonPlay.text =
                             "Pause Podcast"
                     }
 
-                    // Reset the button when the episode finishes.
+
+                    // Reset the Play button when
+                    // the episode finishes.
                     setOnCompletionListener {
 
                         this@PodcastDetailActivity
                             .isPlaying = false
 
+
                         buttonPlay.text =
                             "Play Podcast"
                     }
 
-                    // Handle streaming errors without crashing.
+
+                    // Handle playback errors without
+                    // crashing the application.
                     setOnErrorListener {
                             _,
                             _,
                             _ ->
 
+
                         this@PodcastDetailActivity
                             .isPlaying = false
+
 
                         buttonPlay.isEnabled =
                             true
 
+
                         buttonPlay.text =
                             "Play Podcast"
+
 
                         Toast.makeText(
                             this@PodcastDetailActivity,
@@ -289,9 +567,12 @@ class PodcastDetailActivity :
                             Toast.LENGTH_LONG
                         ).show()
 
+
                         true
                     }
 
+
+                    // Start preparing the online audio.
                     prepareAsync()
                 }
 
@@ -302,8 +583,10 @@ class PodcastDetailActivity :
             buttonPlay.isEnabled =
                 true
 
+
             buttonPlay.text =
                 "Play Podcast"
+
 
             Toast.makeText(
                 this,
@@ -313,7 +596,14 @@ class PodcastDetailActivity :
         }
     }
 
-    // Pauses the current episode.
+
+    // ---------------------------------------------------------
+    // PAUSE AUDIO
+    // ---------------------------------------------------------
+
+    /**
+     * Pauses the currently playing podcast episode.
+     */
     private fun pausePodcast() {
 
         mediaPlayer?.let {
@@ -324,97 +614,34 @@ class PodcastDetailActivity :
             }
         }
 
-        isPlaying = false
+
+        isPlaying =
+            false
+
 
         buttonPlay.text =
             "Play Podcast"
     }
 
-    // Checks whether the current podcast
-    // has been saved as a subscription.
-    private fun isSubscribed(): Boolean {
 
-        val preferences =
-            getSharedPreferences(
-                preferencesName,
-                Context.MODE_PRIVATE
-            )
+    // ---------------------------------------------------------
+    // CLEAN UP MEDIAPLAYER
+    // ---------------------------------------------------------
 
-        return preferences.getBoolean(
-            podcastId.toString(),
-            false
-        )
-    }
-
-    // Saves the selected podcast as subscribed.
-    private fun subscribePodcast() {
-
-        val preferences =
-            getSharedPreferences(
-                preferencesName,
-                Context.MODE_PRIVATE
-            )
-
-        preferences.edit()
-            .putBoolean(
-                podcastId.toString(),
-                true
-            )
-            .apply()
-
-        Toast.makeText(
-            this,
-            "Subscribed to $podcastTitle",
-            Toast.LENGTH_SHORT
-        ).show()
-    }
-
-    // Removes the selected podcast subscription.
-    private fun unsubscribePodcast() {
-
-        val preferences =
-            getSharedPreferences(
-                preferencesName,
-                Context.MODE_PRIVATE
-            )
-
-        preferences.edit()
-            .remove(
-                podcastId.toString()
-            )
-            .apply()
-
-        Toast.makeText(
-            this,
-            "Unsubscribed from $podcastTitle",
-            Toast.LENGTH_SHORT
-        ).show()
-    }
-
-    // Changes the button text to show
-    // whether the podcast is subscribed.
-    private fun updateSubscribeButton() {
-
-        if (isSubscribed()) {
-
-            buttonSubscribe.text =
-                "Subscribed ✓"
-
-        } else {
-
-            buttonSubscribe.text =
-                "Subscribe"
-        }
-    }
-
-    // MediaPlayer must be released when
-    // this Activity is destroyed.
+    /**
+     * MediaPlayer must be released when the Activity
+     * is destroyed so that system audio resources
+     * are not unnecessarily retained.
+     */
     override fun onDestroy() {
 
         super.onDestroy()
 
+
         mediaPlayer?.release()
 
-        mediaPlayer = null
+
+        mediaPlayer =
+            null
     }
 }
